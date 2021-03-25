@@ -30,10 +30,9 @@ const Task = () => {
 const ButtonMain = (props) => {
     // TO DO --> https://www.digitalocean.com/community/tutorials/react-countdown-timer-react-hooks
     const [isRunning, setIsRunning] = useState(false)
-    const [displayTime, setDisplayTime] = useState(undefined)
+    const [displayTime, setDisplayTime] = useState('placeholder')
     const handleClick = () => {
         setIsRunning(() => !isRunning)
-        startTimer()
         props.handleClick()
     }
 
