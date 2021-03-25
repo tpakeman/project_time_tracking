@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom'
 import { App } from './App'
 
 window.addEventListener('DOMContentLoaded', async (e) => {
-    const root = document.createElement('div');
-    document.body.appendChild(root);
+    const root = document.getElementById('root');
     ReactDOM.render(<App />, root);
 });

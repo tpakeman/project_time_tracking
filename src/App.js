@@ -1,7 +1,49 @@
 import React from 'react'
+import Container from '@material-ui/core/Container'
+import { PomodoroMain } from './Pomodoro/Timer'
+import { makeStyles } from '@material-ui/core/styles'
+import Typography from '@material-ui/core/Typography';
 
-export const App = () => {
+const useStyles = makeStyles((theme) => ({
+    appContainer: {
+        display: 'flex',
+        flexDirection: 'column', 
+        minHeight: '100vh'
+    },
+    main: {
+      marginTop: theme.spacing(8),
+      marginBottom: theme.spacing(2),
+    },
+    footer: {
+      padding: theme.spacing(3, 2),
+      marginTop: 'auto',
+      backgroundColor:
+        theme.palette.type === 'light' ? theme.palette.grey[200] : theme.palette.grey[800],
+    },
+  }));
+
+
+  const Copyright = () => {
+    const curYear = new Date().getFullYear();
     return (
-        <div>Hello</div>
+        <Typography variant="body2" color="textSecondary">Copyright © Tom Pakeman {curYear}</Typography>
+    )
+  }
+
+
+  export const App = () => {
+    const classes = useStyles();
+    return (
+        <div id="app-container" className={classes.appContainer}>
+            <Container component='main' className={classes.main} maxWidth="m">
+                <PomodoroMain/>
+            </Container>
+            <footer className={classes.footer}>
+                <Container maxWidth="m">
+                    <Typography variant="body1"></Typography>
+                    <Copyright />
+                </Container>
+            </footer>
+        </div>
     )
 }
