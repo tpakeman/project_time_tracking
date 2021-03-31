@@ -16,8 +16,11 @@ import Collapse from '@material-ui/core/Collapse';
 import Clear from '@material-ui/icons/Clear';
 import Delete from '@material-ui/icons/Delete';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
+import AttachMoneyIcon from '@material-ui/icons/AttachMoney';
+import MoneyOff from '@material-ui/icons/MoneyOff';
 import Checkbox from '@material-ui/core/Checkbox';
 import { cloneDeep, sum, difference } from 'lodash'
+import { green } from '@material-ui/core/colors';
 import {CSVLink, CSVDownload} from 'react-csv';
 import { makeStyles } from '@material-ui/core/styles';
 
@@ -202,6 +205,9 @@ const ProjectRow = (props) => {
     return (
         <>
         <ListItem className={activeClass} button>
+            <ListItemIcon>
+                {props.data.billable ? <AttachMoneyIcon style={{color: green[500]}} /> : <MoneyOff/>}
+                </ListItemIcon>
             <ListItemText
                 primary={props.data.name}
                 secondary={`Total: ${formatTime(totalTime)}`}
