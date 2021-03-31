@@ -1,6 +1,6 @@
 import React from 'react'
 import Container from '@material-ui/core/Container'
-import { PomodoroMain } from './Pomodoro/Timer'
+import { TrackerMain } from './Tracking/Timer'
 import { makeStyles } from '@material-ui/core/styles'
 import Typography from '@material-ui/core/Typography';
 
@@ -11,8 +11,8 @@ const useStyles = makeStyles((theme) => ({
         minHeight: '100vh'
     },
     main: {
-      marginTop: theme.spacing(8),
-      marginBottom: theme.spacing(2),
+        marginTop: theme.spacing(8),
+        marginBottom: theme.spacing(2),
     },
     footer: {
       padding: theme.spacing(3, 2),
@@ -35,11 +35,11 @@ const useStyles = makeStyles((theme) => ({
     const classes = useStyles();
     return (
         <div id="app-container" className={classes.appContainer}>
-            <Container component='main' className={classes.main} maxWidth="m">
-                <PomodoroMain/>
+            <Container component='main' className={classes.main} maxWidth="md">
+                <TrackerMain/>
             </Container>
             <footer className={classes.footer}>
-                <Container maxWidth="m">
+                <Container maxWidth="md">
                     <Typography variant="body1"></Typography>
                     <Copyright />
                 </Container>
