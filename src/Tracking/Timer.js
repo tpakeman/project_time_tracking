@@ -15,11 +15,14 @@ import ExpandMore from '@material-ui/icons/ExpandMore';
 import Collapse from '@material-ui/core/Collapse';
 import Clear from '@material-ui/icons/Clear';
 import Delete from '@material-ui/icons/Delete';
-import { cloneDeep, sum } from 'lodash'
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Checkbox from '@material-ui/core/Checkbox';
+import { cloneDeep, sum, difference } from 'lodash'
 import {CSVLink, CSVDownload} from 'react-csv';
 import { makeStyles } from '@material-ui/core/styles';
 
 const DAYS = {1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday'}
+const DEFAULTS = ['Company Meetings', 'Professional Development', 'Sales Support', 'Team Development', 'Strategic Projects']
 
 const useStyles = makeStyles((theme) => ({
     cardTimer: {
@@ -43,6 +46,7 @@ const useStyles = makeStyles((theme) => ({
     },
     bottomButton: {margin: theme.spacing(1)},
     clearallButton: {color: 'white', backgroundColor: theme.palette.success.main},
+    addDefaultButton: {color: 'white', backgroundColor: theme.palette.warning.main},
     projectRowRunning: {
         '&:hover': {backgroundColor: theme.palette.error.light},
         backgroundColor: theme.palette.success.light
@@ -56,6 +60,7 @@ const useStyles = makeStyles((theme) => ({
 const AddProject = (props) => {
     const [projectName, setProjectName] = useState('')
     const [errorText, setErrorText] = useState(undefined)
+    const [billable, setBillable] = useState(true)
     // Check if the project is already in props.existingProjects
     const handleChange = (e) => {
         setErrorText(undefined)
@@ -65,11 +70,15 @@ const AddProject = (props) => {
     const handleAddProject = () => {
         if (!props.existingProjects.includes(projectName.toLowerCase())) {
             setProjectName('')
-            props.addProject(projectName)
+            props.addProject(projectName, billable)
         }
         else {
             setErrorText('Project already exists!')
         }
+    }
+
+    const handleCheck = () => {
+        setBillable(() => !billable)
     }
 
     return (
@@ -78,11 +87,15 @@ const AddProject = (props) => {
                 id="outlined-basic"
                 label="Project Name"
                 variant="outlined"
-                style={{width: '75%'}}
+                style={{width: '65%'}}
                 value={projectName}
                 onChange={handleChange}
                 error={errorText !== undefined}
                 helperText={errorText}
+                />
+                <FormControlLabel
+                    control={<Checkbox checked={billable} onChange={handleCheck} name="billable" />}
+                    label="billable?"
                 />
             <Button
                 color='primary'
@@ -163,8 +176,8 @@ const ProjectRow = (props) => {
       };
 
     const resetTimer = () => {
+        setTotalTime(calcTotal() - todayTime)
         setTodayTime(0)
-        setTotalTime(props.data.totalTime)
         stopTimer()
       };
 
@@ -230,10 +243,9 @@ const BottomButtons = (props) => {
         <Box className={classes.bottomButtonContainer}>
             <Button
                 variant='contained'
-                className={`${classes.bottomButton} ${classes.clearallButton}`}
+                className={`${classes.bottomButton} ${classes.addDefaultButton}`}
                 onClick={props.addDefaults}    
-                disabled={props.defaultsAdded}
-            >Add some defaults</Button>
+            >Add defaults</Button>
             <Button
                 variant='contained'
                 color='secondary'
@@ -243,7 +255,7 @@ const BottomButtons = (props) => {
             <Button
                 variant='contained'
                 className={`${classes.bottomButton} ${classes.clearallButton}`}
-                onClick={props.handleExport}    
+                onClick={props.handleExport}
             >Export</Button>
         </Box>
     )
@@ -251,13 +263,12 @@ const BottomButtons = (props) => {
 
 export const TrackerMain = () => {
     const classes = useStyles()
-    const [defaultsAdded, setDefaultsAdded] = useState(false)
     const [projects, setProjects] = useState({})
     const [maxID, setMaxID] = useState(0)
 
-    const addProject = (projectName) => {
+    const addProject = (projectName, billable=false) => {
         let tmp = {...projects}
-        tmp[maxID] = {id: maxID, name: projectName, totalTime: 0, elapsedTime: {1:0,2:0,3:0,4:0,5:0,6:0,7:0}}
+        tmp[maxID] = {id: maxID, name: projectName, totalTime: 0, elapsedTime: {1:0,2:0,3:0,4:0,5:0,6:0,7:0}, billable: billable}
         setProjects(tmp)
         setMaxID(() => maxID + 1)
     }
@@ -296,18 +307,26 @@ export const TrackerMain = () => {
     }
 
     const addDefaults = () => {
-        if (!defaultsAdded) {
-            let defaults = ['Company Meetings', 'Professional Development', 'Sales Support', 'Team Development', 'Strategic Projects']
-            addProjects(defaults)
-            setDefaultsAdded(true)
-        }
+        let newProjects = difference(DEFAULTS, Object.values(projects).map(p => p.name))
+        console.log(newProjects)
+        if (newProjects.length > 0) {
+            addProjects(newProjects)
+       }
+    }
+
+    const getCurWeek = () => {
+        let d = new Date();
+        let day = d.getDay()
+        let diff = d.getDate() - day + (day == 0 ? -6:1)
+        let r = new Date(d.setDate(diff))
+        return `${r.getFullYear()}-${r.getMonth()}-${r.getDate()}`
     }
 
     return (
         <>
         <Card className={classes.cardTimer} mx='auto'>
             <Box className={classes.cardHeader}>
-                <Typography component="h1" variant="h4">PS Time Tracking</Typography>
+                <Typography component="h1" variant="h4">{`PS Time Tracking - W/C ${getCurWeek()}`}</Typography>
             </Box>
             <AddProject
                 className={classes.addProject}
@@ -316,20 +335,17 @@ export const TrackerMain = () => {
                 />
         </Card>
         {Object.keys(projects).length > 0 &&
-        <>
             <Projects
                 data={projects}
                 handleUpdateTime={handleUpdateTime}
                 deleteProject={deleteProject}
             />
+        }
             <BottomButtons
                 handleExport={handleExport}
                 handleClearAll={handleClearAll}
                 addDefaults={addDefaults}
-                defaultsAdded={defaultsAdded}
             />
-        </>
-        }
         </>
     )
 }
