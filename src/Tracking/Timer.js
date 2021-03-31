@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import Card from '@material-ui/core/Card'
 import TextField from '@material-ui/core/TextField'
 import Typography from '@material-ui/core/Typography';
@@ -10,6 +10,8 @@ import ListItemText from '@material-ui/core/ListItemText';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import PlayCircleFilled from '@material-ui/icons/PlayCircleFilled';
 import PauseCircleFilled from '@material-ui/icons/PauseCircleFilled';
+import Clear from '@material-ui/icons/Clear';
+import Delete from '@material-ui/icons/Delete';
 import {cloneDeep} from 'lodash'
 
 import { makeStyles } from '@material-ui/core/styles';
@@ -30,33 +32,39 @@ const useStyles = makeStyles((theme) => ({
     projectList: {
         padding: theme.spacing(2)
     },
-    exportButtonContainer: {
+    bottomButtonContainer: {
         float: 'right',
         padding: theme.spacing(2),
     },
-    exportButton: {
-        backgroundColor:theme.palette.success.main,
-        color: 'white'
-    },
+    bottomButton: {margin: theme.spacing(1)},
+    clearallButton: {color: 'white', backgroundColor: theme.palette.success.main},
     projectRowRunning: {
-            '&:hover': {backgroundColor: theme.palette.error.light},
-        },
-        projectRowNotRunning: {
-            '&:hover': {backgroundColor: theme.palette.success.light},
-        }
+        '&:hover': {backgroundColor: theme.palette.error.light},
+        backgroundColor: theme.palette.success.light
+    },
+    projectRowNotRunning: {
+        '&:hover': {backgroundColor: theme.palette.success.light},
+    }
   }));
 
 
 const AddProject = (props) => {
     const [projectName, setProjectName] = useState('')
+    const [errorText, setErrorText] = useState(undefined)
     // Check if the project is already in props.existingProjects
     const handleChange = (e) => {
+        setErrorText(undefined)
         setProjectName(e.target.value)
     }
 
     const handleAddProject = () => {
-        setProjectName('')
-        props.addProject(projectName)
+        if (!props.existingProjects.includes(projectName.toLowerCase())) {
+            setProjectName('')
+            props.addProject(projectName)
+        }
+        else {
+            setErrorText('Project already exists!')
+        }
     }
 
     return (
@@ -68,10 +76,12 @@ const AddProject = (props) => {
                 style={{width: '75%'}}
                 value={projectName}
                 onChange={handleChange}
-            />
+                error={errorText !== undefined}
+                helperText={errorText}
+                />
             <Button
+                color='primary'
                 variant='contained'
-                color='secondary'
                 size='large'
                 onClick={handleAddProject}
                 disabled={projectName.length == 0}
@@ -105,6 +115,7 @@ const Projects = (props) => {
                         handleUpdateTime={handleUpdateTime}
                         currentRunning={currentRunning}
                         data={props.data[p]}
+                        deleteProject={props.deleteProject}
                     />
                     )
                 })}
@@ -114,39 +125,50 @@ const Projects = (props) => {
 }
 
 const ProjectRow = (props) => {
+    const todayDOW = new Date().getDay()
     const [isRunning, setIsRunning] = useState(false)
-    const [totalTime, setTotalTime] = useState(props.data.elapsedTime)
-    const [startTime, setStartTime] = useState(new Date().getTime())
-    const [timer, setTimer] = useState(undefined)
+    const [totalTime, setTotalTime] = useState(props.data.elapsedTime[todayDOW])
     const classes = useStyles()
 
-    const formatTime = () => {
-        return new Date(totalTime).toISOString().substr(11, 8)
+    let timer = useRef(null)
+    let startTime = useRef(null)
+    
+    const formatTime = (ms) => {
+        return new Date(ms).toISOString().substr(11, 8)
     }
 
     const startTimer = () => {
-        props.handleRunUpdate(props.data.id)
         setIsRunning(true)
-        setStartTime(new Date().getTime())
-        setTimer(setInterval(() => {
-            setTotalTime(() => (totalTime + (new Date().getTime() - startTime)))
+        startTime.current = new Date().getTime()
+        props.handleRunUpdate(props.data.id)
+        timer.current = (setInterval(() => {
+            setTotalTime(() => (totalTime + (new Date().getTime() - startTime.current)))
         }, 1000));
       };
 
     const stopTimer = () => {
-        props.handleRunUpdate(undefined)
         setIsRunning(false)
-        clearInterval(timer);
-        props.handleUpdateTime(props.data.id, totalTime)
+        clearInterval(timer.current);
+        props.handleRunUpdate(undefined)
+        props.handleUpdateTime(props.data.id, todayDOW, totalTime)
       };
 
     const resetTimer = () => {
         setTotalTime(0)
+        props.handleUpdateTime(props.data.id, totalTime)
       };
 
 
-    const handleClick = () => {
+    const handlePauseClick = () => {
         !isRunning ? startTimer() : stopTimer()
+    }
+
+    const handleClearClick = () => {
+        resetTimer()
+    }
+
+    const handleDeleteClick = () => {
+        props.deleteProject(props.data.id)
     }
 
     let activeClass = isRunning ? classes.projectRowRunning : classes.projectRowNotRunning
@@ -155,24 +177,36 @@ const ProjectRow = (props) => {
         <ListItem className={activeClass} button>
             <ListItemText
                 primary={props.data.name}
-                secondary={formatTime()}
-                onClick={handleClick}    
+                secondary={formatTime(totalTime)}
+                onClick={handlePauseClick}    
             />
-            <ListItemIcon onClick={handleClick}>
+            <ListItemIcon onClick={handlePauseClick}>
                 {isRunning ? <PauseCircleFilled />: <PlayCircleFilled/>}
+            </ListItemIcon>
+            <ListItemIcon onClick={handleClearClick}>
+                <Clear/>
+            </ListItemIcon>
+            <ListItemIcon onClick={handleDeleteClick}>
+                <Delete/>
             </ListItemIcon>
         </ListItem>
     )
 }
 
-const ExportButton = (props) => {
+const BottomButtons = (props) => {
     const classes = useStyles()
     return (
-        <Box className={classes.exportButtonContainer}>
+        <Box className={classes.bottomButtonContainer}>
             <Button
                 variant='contained'
-                className={classes.exportButton}
-                onClick={() => {alert('TO DO: Export to csv!')}}    
+                color='secondary'
+                className={classes.bottomButton}
+                onClick={props.handleClearAll}    
+            >Clear All</Button>
+            <Button
+                variant='contained'
+                className={`${classes.bottomButton} ${classes.clearallButton}`}
+                onClick={props.handleExport}    
             >Export</Button>
         </Box>
     )
@@ -185,15 +219,29 @@ export const TrackerMain = () => {
 
     const addProject = (projectName) => {
         let tmp = {...projects}
-        tmp[maxID] = {id: maxID, name: projectName, elapsedTime: 0}
+        tmp[maxID] = {id: maxID, name: projectName, elapsedTime: {1:0,2:0,3:0,4:0,5:0,6:0,7:0}}
         setProjects(tmp)
         setMaxID(() => maxID + 1)
     }
 
-    const handleUpdateTime = (projectKey, newTime) => {
+    const handleUpdateTime = (projectKey, dayKey, newTime) => {
         let tmp = cloneDeep(projects)
-        tmp[projectKey].elapsedTime = newTime
+        tmp[projectKey].elapsedTime[dayKey] = newTime
         setProjects(tmp)
+    }
+
+    const deleteProject = (projectKey) => {
+        let tmp = cloneDeep(projects)
+        delete tmp[projectKey]
+        setProjects(tmp)
+    }
+
+    const handleExport = () => {
+        alert('TO DO: Export to csv!')
+    }
+
+    const handleClearAll = () => {
+        setProjects({})
     }
 
     return (
@@ -205,7 +253,7 @@ export const TrackerMain = () => {
             <AddProject
                 className={classes.addProject}
                 addProject={addProject}
-                existingProjects={Object.values(projects).map(p => p.name)}
+                existingProjects={Object.values(projects).map(p => p.name.toLowerCase())}
                 />
         </Card>
         {Object.keys(projects).length > 0 &&
@@ -213,8 +261,12 @@ export const TrackerMain = () => {
             <Projects
                 data={projects}
                 handleUpdateTime={handleUpdateTime}
+                deleteProject={deleteProject}
             />
-            <ExportButton/>
+            <BottomButtons
+                handleExport={handleExport}
+                handleClearAll={handleClearAll}
+            />
         </>
         }
         </>

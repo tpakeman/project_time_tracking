@@ -12,4 +12,4 @@
 
 ### Bugs
 * It takes multiple clicks to start the timer
-* Switching should update the timer too
+* Timer continues when paused
