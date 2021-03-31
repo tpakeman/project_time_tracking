@@ -10,11 +10,16 @@ import ListItemText from '@material-ui/core/ListItemText';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import PlayCircleFilled from '@material-ui/icons/PlayCircleFilled';
 import PauseCircleFilled from '@material-ui/icons/PauseCircleFilled';
+import ExpandLess from '@material-ui/icons/ExpandLess';
+import ExpandMore from '@material-ui/icons/ExpandMore';
+import Collapse from '@material-ui/core/Collapse';
 import Clear from '@material-ui/icons/Clear';
 import Delete from '@material-ui/icons/Delete';
-import {cloneDeep} from 'lodash'
-
+import { cloneDeep, sum } from 'lodash'
+import {CSVLink, CSVDownload} from 'react-csv';
 import { makeStyles } from '@material-ui/core/styles';
+
+const DAYS = {1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday'}
 
 const useStyles = makeStyles((theme) => ({
     cardTimer: {
@@ -100,10 +105,6 @@ const Projects = (props) => {
         setCurrentRunning(projectKey)
     }
     
-    const handleUpdateTime = (projectKey, newTime) => {
-        props.handleUpdateTime(projectKey, newTime)
-    }
-
     return (
         <Card mx='auto' className={classes.projectList}>
             <List>
@@ -112,7 +113,7 @@ const Projects = (props) => {
                     <ProjectRow
                         key={p}
                         handleRunUpdate={handleRunUpdate}
-                        handleUpdateTime={handleUpdateTime}
+                        handleUpdateTime={props.handleUpdateTime}
                         currentRunning={currentRunning}
                         data={props.data[p]}
                         deleteProject={props.deleteProject}
@@ -127,7 +128,9 @@ const Projects = (props) => {
 const ProjectRow = (props) => {
     const todayDOW = new Date().getDay()
     const [isRunning, setIsRunning] = useState(false)
-    const [totalTime, setTotalTime] = useState(props.data.elapsedTime[todayDOW])
+    const [totalTime, setTotalTime] = useState(props.data.totalTime)
+    const [todayTime, setTodayTime] = useState(props.data.elapsedTime[todayDOW])
+    const [isOpen, setIsOpen] = useState(false);
     const classes = useStyles()
 
     let timer = useRef(null)
@@ -137,12 +140,18 @@ const ProjectRow = (props) => {
         return new Date(ms).toISOString().substr(11, 8)
     }
 
+    const calcTotal = () => {
+        return sum(Object.values(props.data.elapsedTime))
+    }
+
     const startTimer = () => {
         setIsRunning(true)
         startTime.current = new Date().getTime()
         props.handleRunUpdate(props.data.id)
         timer.current = (setInterval(() => {
-            setTotalTime(() => (totalTime + (new Date().getTime() - startTime.current)))
+            let newToday = (todayTime + (new Date().getTime() - startTime.current))
+            setTodayTime(() => newToday)
+            setTotalTime(() => calcTotal() + newToday)
         }, 1000));
       };
 
@@ -150,14 +159,18 @@ const ProjectRow = (props) => {
         setIsRunning(false)
         clearInterval(timer.current);
         props.handleRunUpdate(undefined)
-        props.handleUpdateTime(props.data.id, todayDOW, totalTime)
+        props.handleUpdateTime(props.data.id, todayDOW, todayTime, totalTime)
       };
 
     const resetTimer = () => {
-        setTotalTime(0)
-        props.handleUpdateTime(props.data.id, totalTime)
+        setTodayTime(0)
+        setTotalTime(props.data.totalTime)
+        stopTimer()
       };
 
+    const handleRowClick = () => {
+        setIsOpen(() => !isOpen);
+      };
 
     const handlePauseClick = () => {
         !isRunning ? startTimer() : stopTimer()
@@ -174,11 +187,12 @@ const ProjectRow = (props) => {
     let activeClass = isRunning ? classes.projectRowRunning : classes.projectRowNotRunning
 
     return (
+        <>
         <ListItem className={activeClass} button>
             <ListItemText
                 primary={props.data.name}
-                secondary={formatTime(totalTime)}
-                onClick={handlePauseClick}    
+                secondary={`Total: ${formatTime(totalTime)}`}
+                onClick={handleRowClick}    
             />
             <ListItemIcon onClick={handlePauseClick}>
                 {isRunning ? <PauseCircleFilled />: <PlayCircleFilled/>}
@@ -189,7 +203,24 @@ const ProjectRow = (props) => {
             <ListItemIcon onClick={handleDeleteClick}>
                 <Delete/>
             </ListItemIcon>
-        </ListItem>
+            {isOpen ? <ExpandLess onClick={handleRowClick}/> : <ExpandMore onClick={handleRowClick} />}
+            </ListItem>
+            <Collapse in={isOpen} timeout="auto" unmountOnExit>
+                <List dense disablePadding>
+                {Object.keys(props.data.elapsedTime).map(t => {
+                    return (
+                        <ListItem button key={t}>
+                          <ListItemText
+                            primary={DAYS[t]}
+                            secondary={formatTime(t == todayDOW ? totalTime : props.data['elapsedTime'][t])}
+                            // Secondary = time on that day
+                            // secondary={formatTime(totalTime)}
+                            />
+                        </ListItem>
+                    )})}
+                </List>
+            </Collapse>
+            </>
     )
 }
 
@@ -197,6 +228,12 @@ const BottomButtons = (props) => {
     const classes = useStyles()
     return (
         <Box className={classes.bottomButtonContainer}>
+            <Button
+                variant='contained'
+                className={`${classes.bottomButton} ${classes.clearallButton}`}
+                onClick={props.addDefaults}    
+                disabled={props.defaultsAdded}
+            >Add some defaults</Button>
             <Button
                 variant='contained'
                 color='secondary'
@@ -214,19 +251,33 @@ const BottomButtons = (props) => {
 
 export const TrackerMain = () => {
     const classes = useStyles()
+    const [defaultsAdded, setDefaultsAdded] = useState(false)
     const [projects, setProjects] = useState({})
     const [maxID, setMaxID] = useState(0)
 
     const addProject = (projectName) => {
         let tmp = {...projects}
-        tmp[maxID] = {id: maxID, name: projectName, elapsedTime: {1:0,2:0,3:0,4:0,5:0,6:0,7:0}}
+        tmp[maxID] = {id: maxID, name: projectName, totalTime: 0, elapsedTime: {1:0,2:0,3:0,4:0,5:0,6:0,7:0}}
         setProjects(tmp)
         setMaxID(() => maxID + 1)
     }
 
-    const handleUpdateTime = (projectKey, dayKey, newTime) => {
+    const addProjects = (projectArray) => {
+        let tmp = {...projects},
+        tmpMaxID = maxID
+        projectArray.forEach((p) => {
+            tmp[tmpMaxID] = {id: tmpMaxID, name: p, totalTime: 0, elapsedTime: {1:0,2:0,3:0,4:0,5:0,6:0,7:0}}
+            tmpMaxID += 1
+        })
+        setProjects(tmp)
+        setMaxID(() => tmpMaxID + 1)
+    }
+
+
+    const handleUpdateTime = (projectKey, dayKey, dayTime, totalTime) => {
         let tmp = cloneDeep(projects)
-        tmp[projectKey].elapsedTime[dayKey] = newTime
+        tmp[projectKey].elapsedTime[dayKey] = dayTime
+        tmp[projectKey].totalTime = totalTime
         setProjects(tmp)
     }
 
@@ -242,6 +293,14 @@ export const TrackerMain = () => {
 
     const handleClearAll = () => {
         setProjects({})
+    }
+
+    const addDefaults = () => {
+        if (!defaultsAdded) {
+            let defaults = ['Company Meetings', 'Professional Development', 'Sales Support', 'Team Development', 'Strategic Projects']
+            addProjects(defaults)
+            setDefaultsAdded(true)
+        }
     }
 
     return (
@@ -266,6 +325,8 @@ export const TrackerMain = () => {
             <BottomButtons
                 handleExport={handleExport}
                 handleClearAll={handleClearAll}
+                addDefaults={addDefaults}
+                defaultsAdded={defaultsAdded}
             />
         </>
         }

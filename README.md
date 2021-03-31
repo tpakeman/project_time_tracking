@@ -1,7 +1,4 @@
 ### Looker PS time tracking app
-* Add a project by name - Done
-* Show projects in a list - done
-  * show total time logged against each project - Done
 * Export to csv
 * Log each time against a specific day
 * Ability to start / stop a timer
