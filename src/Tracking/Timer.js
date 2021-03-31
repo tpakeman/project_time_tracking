@@ -34,12 +34,9 @@ const DAYS = {1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Frid
 const DEFAULTS = ['Company Meetings', 'Professional Development', 'Sales Support', 'Team Development', 'Strategic Projects']
 
 // TODO - move to a utilities file
-const convertMSToNearestMin = (ms, nearest=15) => {
-    let truncated = 1000 * 60 * nearest
-    let totalMins = Math.round(ms / truncated) * nearest
-    let totalHours = Math.floor(totalMins / 60)
-    let remainder = totalMins % 60
-    return `${totalHours}.${remainder}`
+const convertToNearestHour = (n, precision=4) => {
+    let msHour = (60 * 60 * 1000)
+    return Math.round((n / msHour) * precision) / precision
  }
 
 const convertForExport = (data) => {
@@ -48,7 +45,7 @@ const convertForExport = (data) => {
     Object.values(data).forEach(p => {
         let row = {id: ix, Project: p.name, Billable: p.billable}
         Object.keys(p.elapsedTime).forEach(d => {
-            row[DAYS[d]] = convertMSToNearestMin(p.elapsedTime[d])
+            row[DAYS[d]] = convertToNearestHour(p.elapsedTime[d])
         })
         readyData.push(row)
         ix += 1
@@ -431,7 +428,6 @@ const TrackerInner = (props) => {
     const handleExport = () => {
         setExportData(convertForExport(projects))
         setTimeout(() => {
-            console.log(exportData)
             downloadLink.current.link.click()
         }, 500)
     }
@@ -536,7 +532,7 @@ const DataPage = (props) => {
 }
 
 export const TrackerMain = () => {
-    const [authed, setAuthed] = useState(true)
+    const [authed, setAuthed] = useState(false)
     return (<>{authed ? 
                 <TrackerInner auth={setAuthed}/>
                 : <PasswordEntry auth={setAuthed}/> 
