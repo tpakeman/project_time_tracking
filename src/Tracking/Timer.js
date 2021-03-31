@@ -10,6 +10,7 @@ import ListItemText from '@material-ui/core/ListItemText';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import PlayCircleFilled from '@material-ui/icons/PlayCircleFilled';
 import PauseCircleFilled from '@material-ui/icons/PauseCircleFilled';
+import { DataGrid } from '@material-ui/data-grid';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
 import Collapse from '@material-ui/core/Collapse';
@@ -19,15 +20,48 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import AttachMoneyIcon from '@material-ui/icons/AttachMoney';
 import MoneyOff from '@material-ui/icons/MoneyOff';
 import Checkbox from '@material-ui/core/Checkbox';
+import TocIcon from '@material-ui/icons/Toc';
+import TimerIcon from '@material-ui/icons/Timer';
+import Tabs from '@material-ui/core/Tabs';
+import Tab from '@material-ui/core/Tab';
 import { cloneDeep, sum, difference } from 'lodash'
 import { green } from '@material-ui/core/colors';
-import {CSVLink, CSVDownload} from 'react-csv';
+import Modal from '@material-ui/core/Modal';
+import {CSVLink} from 'react-csv';
 import { makeStyles } from '@material-ui/core/styles';
 
 const DAYS = {1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday'}
 const DEFAULTS = ['Company Meetings', 'Professional Development', 'Sales Support', 'Team Development', 'Strategic Projects']
 
+// TODO - move to a utilities file
+const convertMSToNearestMin = (ms, nearest=15) => {
+    let truncated = 1000 * 60 * nearest
+    let totalMins = Math.round(ms / truncated) * nearest
+    let totalHours = Math.floor(totalMins / 60)
+    let remainder = totalMins % 60
+    return `${totalHours}.${remainder}`
+ }
+
+const convertForExport = (data) => {
+    let readyData = []
+    let ix = 0
+    Object.values(data).forEach(p => {
+        let row = {id: ix, Project: p.name, Billable: p.billable}
+        Object.keys(p.elapsedTime).forEach(d => {
+            row[DAYS[d]] = convertMSToNearestMin(p.elapsedTime[d])
+        })
+        readyData.push(row)
+        ix += 1
+    })
+    return readyData
+}
+
+
 const useStyles = makeStyles((theme) => ({
+    passwordModal: {
+        padding: theme.spacing(2, 4, 3),
+        maxWidth: '35%'
+    },
     cardTimer: {
         display: 'flex',
         flexDirection: 'column',
@@ -38,10 +72,14 @@ const useStyles = makeStyles((theme) => ({
         padding: theme.spacing(1)
     },
     cardHeader: {
-        paddingBottom: theme.spacing(1)
+        padding: theme.spacing(2)
     },
     projectList: {
         padding: theme.spacing(2)
+    },
+    dataGrid: {
+        width: '90vw',
+        minHeight: '500px',
     },
     bottomButtonContainer: {
         float: 'right',
@@ -262,15 +300,72 @@ const BottomButtons = (props) => {
                 variant='contained'
                 className={`${classes.bottomButton} ${classes.clearallButton}`}
                 onClick={props.handleExport}
+                disabled={!props.hasData}
             >Export</Button>
+            <Button
+                variant='contained'
+                className={classes.bottomButton}
+                onClick={props.handleLogout}
+            >Log Out</Button>
         </Box>
     )
 }
 
-export const TrackerMain = () => {
+const PasswordEntry = (props) => {
+    const classes = useStyles();
+    const [password, setPassword] = useState('')
+    const [errorText, setErrorText] = useState(undefined)
+
+    const handleChange = (e) => {
+        setPassword(e.target.value)
+        setErrorText(undefined)
+    }
+
+    const handleLogin = () => {
+        if (password == 'looker') {
+            props.auth(true)
+        } else {
+            setErrorText('Incorrect Password!')
+        }
+    }
+    return (
+        <Modal open className={classes.passwordModal}>
+            <Card className={classes.cardTimer}>
+                <Box display='flex' flexDirection='row' justifyContent='space-around'>
+                    <TextField
+                    id="outlined-basic"
+                    label="Password"
+                    variant="outlined"
+                    style={{width: '65%'}}
+                    value={password}
+                    onChange={handleChange}
+                    error={errorText !== undefined}
+                    helperText={errorText}
+                    type="password"
+                    />
+                    <Button
+                        onClick={handleLogin}
+                        style={{width: '30%'}}
+                        variant='contained'
+                        color='primary'
+                    >Log in</Button>
+                </Box>
+            </Card>
+        </Modal>
+    )
+}
+
+const TrackerInner = (props) => {
     const classes = useStyles()
     const [projects, setProjects] = useState({})
     const [maxID, setMaxID] = useState(0)
+    const [exportData, setExportData] = useState([])
+    const [activePage, setActivePage] = useState(0)
+    const handleActivePageChange = (_e, v) => {
+        setActivePage(v)
+    }
+
+    const downloadLink = useRef(null)
 
     const addProject = (projectName, billable=false) => {
         let tmp = {...projects}
@@ -291,6 +386,7 @@ export const TrackerMain = () => {
     }
 
 
+
     const handleUpdateTime = (projectKey, dayKey, dayTime, totalTime) => {
         let tmp = cloneDeep(projects)
         tmp[projectKey].elapsedTime[dayKey] = dayTime
@@ -304,9 +400,6 @@ export const TrackerMain = () => {
         setProjects(tmp)
     }
 
-    const handleExport = () => {
-        alert('TO DO: Export to csv!')
-    }
 
     const handleClearAll = () => {
         setProjects({})
@@ -314,10 +407,13 @@ export const TrackerMain = () => {
 
     const addDefaults = () => {
         let newProjects = difference(DEFAULTS, Object.values(projects).map(p => p.name))
-        console.log(newProjects)
         if (newProjects.length > 0) {
             addProjects(newProjects)
        }
+    }
+
+    const handleLogout = () => {
+        props.auth(false)
     }
 
     const getCurWeek = () => {
@@ -328,30 +424,121 @@ export const TrackerMain = () => {
         return `${r.getFullYear()}-${r.getMonth()}-${r.getDate()}`
     }
 
+    const makeFileName = () => {
+        return `Looker Time Logging - ${getCurWeek()}.csv`
+    }
+
+    const handleExport = () => {
+        setExportData(convertForExport(projects))
+        setTimeout(() => {
+            console.log(exportData)
+            downloadLink.current.link.click()
+        }, 500)
+    }
+
     return (
         <>
-        <Card className={classes.cardTimer} mx='auto'>
-            <Box className={classes.cardHeader}>
-                <Typography component="h1" variant="h4">{`PS Time Tracking - W/C ${getCurWeek()}`}</Typography>
-            </Box>
-            <AddProject
-                className={classes.addProject}
-                addProject={addProject}
-                existingProjects={Object.values(projects).map(p => p.name.toLowerCase())}
+            <Tabs
+                value={activePage}
+                indicatorColor="primary"
+                textColor="primary"
+                onChange={handleActivePageChange}
+                centered
+                >
+                <Tab label="Log Time" icon={<TimerIcon/>}/>
+                <Tab
+                    label="View Data" disabled={Object.keys(projects).length == 0}
+                    icon={<TocIcon/>}
                 />
-        </Card>
-        {Object.keys(projects).length > 0 &&
-            <Projects
-                data={projects}
-                handleUpdateTime={handleUpdateTime}
-                deleteProject={deleteProject}
-            />
-        }
-            <BottomButtons
-                handleExport={handleExport}
-                handleClearAll={handleClearAll}
-                addDefaults={addDefaults}
-            />
+            </Tabs>
+            <div style={{display: activePage == 0 ? 'block' : 'none'}}>
+            <Card className={classes.cardTimer} mx='auto'>
+                <Box className={classes.cardHeader}>
+                    <Typography component="h4" variant="h4">PS Time Tracking</Typography>
+                    <Typography component="h6" variant="h6">{`W/C ${getCurWeek()}`}</Typography>
+                </Box>
+                <AddProject
+                    className={classes.addProject}
+                    addProject={addProject}
+                    existingProjects={Object.values(projects).map(p => p.name.toLowerCase())}
+                    />
+            </Card>
+            {Object.keys(projects).length > 0 &&
+                <>
+                <Projects
+                    data={projects}
+                    handleUpdateTime={handleUpdateTime}
+                    deleteProject={deleteProject}
+                />
+                <CSVLink
+                    ref={(r) => {downloadLink.current = r}}
+                    data={exportData}
+                    filename={makeFileName()}
+                    target="_blank"
+                    style={{display:'none'}}
+                />
+                </>
+            }
+                <BottomButtons
+                    handleExport={handleExport}
+                    handleClearAll={handleClearAll}
+                    addDefaults={addDefaults}
+                    handleLogout={handleLogout}
+                    hasData={Object.keys(projects).length > 0}
+                />
+            
+            </div>
+            <div>
+                <DataPage
+                    active={activePage == 1}
+                    data={projects}
+                />
+            </div>
         </>
     )
+}
+
+const DataPage = (props) => {
+    const classes = useStyles()
+    let data = convertForExport(props.data)
+    data.forEach(d => {
+        let tmp = Object.keys(d).filter(k => Object.values(DAYS).includes(k)).map(k => Number(d[k]))
+        d.Total = sum(tmp)
+    })
+    const columns = [
+        { field: 'Project', headerName: 'Name', width: 300 },
+        {
+            field: 'Billable',
+            headerName: '$',
+            width: 60,
+            valueFormatter: (v) => v.value == undefined ? '' : '$'
+        },
+        { field: 'Monday', headerName: 'M', type: 'number', width: 90 },
+        { field: 'Tuesday', headerName: 'T', type: 'number', width: 90 },
+        { field: 'Wednesday', headerName: 'W', type: 'number', width: 90 },
+        { field: 'Thursday', headerName: 'Th', type: 'number', width: 90 },
+        { field: 'Friday', headerName: 'F', type: 'number', width: 90 },
+        { field: 'Saturday', headerName: 'S', type: 'number', width: 90 },
+        { field: 'Sunday', headerName: 'Su', type: 'number', width: 90 },
+        { field: 'Total', headerName: 'Total', type: 'number', width: 150 },
+      ];
+    return (
+        <div style={{'display': props.active ? 'flex': 'none'}}>
+            <DataGrid
+                autoHeight
+                loading={data.length === 0}
+                className={classes.dataGrid}
+                rows={data}
+                columns={columns}
+            />
+        </div>
+    )
+}
+
+export const TrackerMain = () => {
+    const [authed, setAuthed] = useState(true)
+    return (<>{authed ? 
+                <TrackerInner auth={setAuthed}/>
+                : <PasswordEntry auth={setAuthed}/> 
+            }</>)
 }

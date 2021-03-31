@@ -35,7 +35,7 @@ const useStyles = makeStyles((theme) => ({
     const classes = useStyles();
     return (
         <div id="app-container" className={classes.appContainer}>
-            <Container component='main' className={classes.main} maxWidth="md">
+            <Container component='main' className={classes.main} maxWidth="lg">
                 <TrackerMain/>
             </Container>
             <footer className={classes.footer}>
