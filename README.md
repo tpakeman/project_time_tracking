@@ -1,9 +1,8 @@
 ## Project Time Tracking App
-
-This is a small React Webapp to record time spent on various projects.
-Time is recorded in hours rounded to the nearest 15 minutes, so 1 hour and 15 minutes would be recorded as 1.25
-Time logged can be viewed in the browser or exported to CSV.
-It is possible to set up some 'default projects' in the `src/common/constants.js`
+* This is a small React Webapp to record time spent on various projects.
+* Time is recorded in hours rounded to the nearest 15 minutes, so 1 hour and 15 minutes would be recorded as 1.25
+* Time logged can be viewed in the browser or exported to CSV.
+* It is possible to set up some 'default projects' in the `src/common/constants.js`
 
 ---
 ### Running this locally
