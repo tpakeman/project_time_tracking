@@ -14,5 +14,3 @@ export const DEFAULT_PROJECTS = [
   "Team Development",
   "Strategic Projects",
 ];
-
-export const TEMP_APP_PASSWORD = 'changeme'

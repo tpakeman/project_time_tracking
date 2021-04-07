@@ -428,7 +428,7 @@ const TrackerInner = (props) => {
 };
 
 export const TrackerMain = () => {
-  const [authed, setAuthed] = useState(true);
+  const [authed, setAuthed] = useState(false);
   return (
     <>
       {authed ? (

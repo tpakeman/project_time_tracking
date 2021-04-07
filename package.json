@@ -1,11 +1,14 @@
 {
   "name": "pomodoro_react",
   "version": "1.0.0",
-  "description": "A pomodoro timer made in React.js",
+  "description": "A mimial time tracker made in React.js",
   "main": "index.js",
   "author": "Tom Pakeman",
   "license": "MIT",
   "private": false,
+  "engines": {
+    "node": "14.x.x"
+  },
   "scripts": {
     "start": "webpack-dev-server",
     "build": "export BABEL_ENV=build && webpack --mode=production --config webpack.config.js"
@@ -31,7 +34,7 @@
     "babel-plugin-styled-components": "^1.12.0",
     "babel-preset-nano-react-app": "^0.1.0",
     "css-loader": "^5.2.0",
-    "html-webpack-plugin": "^5.3.1",
+    "dotenv-webpack": "^7.0.2",
     "lodash": "^4.17.21",
     "react-hot-loader": "^4.13.0",
     "style-loader": "^2.0.0",

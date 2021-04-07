@@ -1,5 +1,5 @@
 const path = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
+const Dotenv = require('dotenv-webpack');
 
 process.env.NODE_ENV = 'development';
 
@@ -8,8 +8,8 @@ module.exports = {
   entry: path.join(__dirname, 'src', 'index'),
   watch: true,
   output: {
-    path: path.join(__dirname, 'dist'),
-    publicPath: '/dist/',
+    path: path.join(__dirname, 'dist', 'js'),
+    publicPath: '/dist/js/',
     filename: "bundle.js",
     chunkFilename: '[name].js'
   },
@@ -39,11 +39,12 @@ module.exports = {
   },
   devtool: 'source-map',
   devServer: {
-    contentBase: path.join(__dirname, '/dist/'),
+    contentBase: path.join(__dirname, '/dist'),
     publicPath: '/',
     hot: true,
     inline: true,
     host: 'localhost',
     port: 8080,
-  }
+  },
+  plugins: [new Dotenv()]
 };

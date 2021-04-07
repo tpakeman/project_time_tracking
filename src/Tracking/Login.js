@@ -5,7 +5,6 @@ import Card from "@material-ui/core/Card";
 import TextField from "@material-ui/core/TextField";
 import Button from "@material-ui/core/Button";
 import Box from "@material-ui/core/Box";
-import { TEMP_APP_PASSWORD } from './common/constants'
 
 export const PasswordEntry = (props) => {
   const classes = useStyles();
@@ -18,7 +17,7 @@ export const PasswordEntry = (props) => {
   };
 
   const handleLogin = () => {
-    if (password == TEMP_APP_PASSWORD) {
+    if (password == process.env.PASSWORD) {
       props.auth(true);
     } else {
       setErrorText("Incorrect Password!");
