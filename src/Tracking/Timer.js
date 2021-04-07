@@ -24,7 +24,6 @@ import TimerIcon from "@material-ui/icons/Timer";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
 import { cloneDeep, sum, difference } from "lodash";
-import { green } from "@material-ui/core/colors";
 import { CSVLink } from "react-csv";
 import { convertForExport } from "./common/utils";
 import { DAYS, DEFAULT_PROJECTS } from "./common/constants";
@@ -183,7 +182,8 @@ const ProjectRow = (props) => {
       <ListItem className={activeClass} button>
         <ListItemIcon>
           {props.data.billable ? (
-            <AttachMoneyIcon style={{ color: green[500] }} />
+            <AttachMoneyIcon 
+              className={classes.billableIcon} />
           ) : (
             <MoneyOff />
           )}
@@ -428,7 +428,7 @@ const TrackerInner = (props) => {
 };
 
 export const TrackerMain = () => {
-  const [authed, setAuthed] = useState(false);
+  const [authed, setAuthed] = useState(true);
   return (
     <>
       {authed ? (

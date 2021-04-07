@@ -1,4 +1,6 @@
 import { makeStyles } from "@material-ui/core/styles";
+import { teal } from '@material-ui/core/colors';
+import { pink } from '@material-ui/core/colors';
 
 export const useStyles = makeStyles((theme) => ({
   appContainer: {
@@ -40,6 +42,9 @@ export const useStyles = makeStyles((theme) => ({
   dataGrid: {
     width: "100%",
     minHeight: "500px",
+    '& .colBillable': {
+      backgroundColor: teal[100]
+    },
   },
   bottomButtonContainer: {
     float: "right",
@@ -55,13 +60,16 @@ export const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.warning.main,
   },
   projectRowRunning: {
-    "&:hover": { backgroundColor: theme.palette.error.light },
-    backgroundColor: theme.palette.success.light,
+    "&:hover": { backgroundColor: pink[200] },
+    backgroundColor: teal[100],
   },
   projectRowNotRunning: {
-    "&:hover": { backgroundColor: theme.palette.success.light },
+    "&:hover": { backgroundColor: teal[200] },
   },
   dataSummary: {
     margin: theme.spacing(2)
+  },
+  billableIcon: {
+    color: teal[700]
   }
 }));

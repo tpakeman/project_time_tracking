@@ -14,10 +14,16 @@ This app is designed to be bundled with webpack, but it can be run locally using
 
 
 ### Features
+* Favicon
 * Prevent running two timers at once
 * Edit the name of an existing project
 * Add time manually
 * Make responsive
+* Save sessions and recover them
+* Add daily totals row at bottom of chart
+* Show total in both pages
+* Host it
+* Make table filterable to only non-zero rows
 
 ### Bugs
 * Working across midnight will count the values in both days
